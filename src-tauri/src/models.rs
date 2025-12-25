@@ -36,6 +36,7 @@ pub struct QueryResult {
     pub execution_time_ms: u128,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportOptions {
     pub file_path: String,
@@ -53,6 +54,7 @@ pub enum ExportFormat {
     Json,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportOptions {
     pub file_path: String,
@@ -60,6 +62,7 @@ pub struct ImportOptions {
     pub format: ImportFormat,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImportFormat {
