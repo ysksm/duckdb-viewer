@@ -10,13 +10,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Gridster, GridsterItem, GridsterConfig, GridsterItemConfig } from 'angular-gridster2';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration } from 'chart.js';
 import { DashboardService } from '../../services/dashboard.service';
 import { QueryService } from '../../services/query.service';
 import { Dashboard, DashboardWidget, WidgetType } from '../../models/database.model';
 import { WidgetDialogComponent } from './widget-dialog.component';
+import { InputDialogComponent } from './input-dialog.component';
+import { ConfirmDialogComponent } from './confirm-dialog.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -33,8 +34,6 @@ import { WidgetDialogComponent } from './widget-dialog.component';
     MatFormFieldModule,
     MatMenuModule,
     MatTabsModule,
-    Gridster,
-    GridsterItem,
     BaseChartDirective,
   ],
   template: `
@@ -93,9 +92,9 @@ import { WidgetDialogComponent } from './widget-dialog.component';
       </div>
 
       @if (dashboardService.currentDashboard()) {
-        <gridster [options]="options">
+        <div class="widget-grid">
           @for (widget of dashboardService.currentDashboard()!.widgets; track widget.id) {
-            <gridster-item [item]="toGridsterItem(widget)">
+            <div class="grid-widget">
               <mat-card class="widget-card">
                 <mat-card-header>
                   <mat-card-title>{{ widget.title }}</mat-card-title>
@@ -143,34 +142,36 @@ import { WidgetDialogComponent } from './widget-dialog.component';
                     }
                     @case ('table') {
                       <div class="table-widget">
-                        @if (widgetData()[widget.id]?.rows) {
+                        @if (getWidgetData(widget.id)?.rows?.length) {
                           <table>
                             <thead>
                               <tr>
-                                @for (col of widgetData()[widget.id].columns; track col) {
+                                @for (col of getWidgetData(widget.id).columns; track col) {
                                   <th>{{ col }}</th>
                                 }
                               </tr>
                             </thead>
                             <tbody>
-                              @for (row of widgetData()[widget.id].rows.slice(0, 10); track $index) {
+                              @for (row of getWidgetData(widget.id).rows.slice(0, 10); track $index) {
                                 <tr>
                                   @for (cell of row; track $index) {
-                                    <td>{{ cell }}</td>
+                                    <td>{{ formatCell(cell) }}</td>
                                   }
                                 </tr>
                               }
                             </tbody>
                           </table>
+                        } @else {
+                          <div class="no-data">No data available</div>
                         }
                       </div>
                     }
                   }
                 </mat-card-content>
               </mat-card>
-            </gridster-item>
+            </div>
           }
-        </gridster>
+        </div>
       } @else {
         <div class="empty-state">
           <mat-icon>dashboard</mat-icon>
@@ -183,11 +184,19 @@ import { WidgetDialogComponent } from './widget-dialog.component';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
+
     .dashboard-container {
       display: flex;
       flex-direction: column;
       height: 100%;
+      width: 100%;
       background: #1e1e1e;
+      overflow: hidden;
     }
 
     .dashboard-header {
@@ -216,31 +225,49 @@ import { WidgetDialogComponent } from './widget-dialog.component';
       gap: 8px;
     }
 
-    gridster {
+    .widget-grid {
       flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 16px;
+      padding: 16px;
+      overflow: auto;
       background: #1e1e1e;
+    }
+
+    .grid-widget {
+      min-height: 300px;
+      background: #252526;
+      border-radius: 4px;
+      overflow: hidden;
     }
 
     .widget-card {
       height: 100%;
+      width: 100%;
       display: flex;
       flex-direction: column;
       background: #252526;
       color: #d4d4d4;
+      margin: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
 
-      mat-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 16px;
-        background: #333;
-      }
+    ::ng-deep .widget-card .mat-mdc-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: #333;
+      flex-shrink: 0;
+    }
 
-      mat-card-content {
-        flex: 1;
-        padding: 16px;
-        overflow: auto;
-      }
+    ::ng-deep .widget-card .mat-mdc-card-content {
+      flex: 1;
+      padding: 16px;
+      overflow: auto;
+      min-height: 0;
     }
 
     .chart-container {
@@ -272,6 +299,7 @@ import { WidgetDialogComponent } from './widget-dialog.component';
 
     .table-widget {
       overflow: auto;
+      height: 100%;
 
       table {
         width: 100%;
@@ -282,11 +310,23 @@ import { WidgetDialogComponent } from './widget-dialog.component';
         padding: 8px 12px;
         text-align: left;
         border-bottom: 1px solid #3c3c3c;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       th {
         background: #333;
         font-weight: 500;
+      }
+
+      .no-data {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
       }
     }
 
@@ -318,19 +358,6 @@ export class DashboardComponent {
 
   widgetData = signal<Record<string, any>>({});
 
-  options: GridsterConfig = {
-    gridType: 'fit',
-    displayGrid: 'onDrag&Resize',
-    pushItems: true,
-    draggable: { enabled: true },
-    resizable: { enabled: true },
-    minCols: 4,
-    maxCols: 12,
-    minRows: 4,
-    maxRows: 100,
-    itemChangeCallback: (item: GridsterItemConfig) => this.onItemChange(item),
-  };
-
   chartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -344,32 +371,63 @@ export class DashboardComponent {
     this.refreshAllWidgets();
   }
 
-  async createDashboard(): Promise<void> {
-    const name = prompt('Enter dashboard name:');
-    if (name) {
-      const dashboard = await this.dashboardService.createDashboard(name);
-      this.dashboardService.selectDashboard(dashboard.id);
-    }
+  createDashboard(): void {
+    const dialogRef = this.dialog.open(InputDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Create Dashboard',
+        label: 'Dashboard Name',
+        placeholder: 'Enter dashboard name',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (name: string | null) => {
+      if (name) {
+        const dashboard = await this.dashboardService.createDashboard(name);
+        this.dashboardService.selectDashboard(dashboard.id);
+      }
+    });
   }
 
-  async renameDashboard(): Promise<void> {
+  renameDashboard(): void {
     const current = this.dashboardService.currentDashboard();
     if (!current) return;
 
-    const name = prompt('Enter new name:', current.name);
-    if (name && name !== current.name) {
-      current.name = name;
-      await this.dashboardService.updateDashboard(current);
-    }
+    const dialogRef = this.dialog.open(InputDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Rename Dashboard',
+        label: 'Dashboard Name',
+        value: current.name,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (name: string | null) => {
+      if (name && name !== current.name) {
+        current.name = name;
+        await this.dashboardService.updateDashboard(current);
+      }
+    });
   }
 
-  async deleteDashboard(): Promise<void> {
+  deleteDashboard(): void {
     const current = this.dashboardService.currentDashboard();
     if (!current) return;
 
-    if (confirm(`Delete dashboard "${current.name}"?`)) {
-      await this.dashboardService.deleteDashboard(current.id);
-    }
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Delete Dashboard',
+        message: `Are you sure you want to delete "${current.name}"?`,
+        confirmText: 'Delete',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed: boolean) => {
+      if (confirmed) {
+        await this.dashboardService.deleteDashboard(current.id);
+      }
+    });
   }
 
   async addWidget(type: WidgetType): Promise<void> {
@@ -415,13 +473,24 @@ export class DashboardComponent {
     });
   }
 
-  async removeWidget(widgetId: string): Promise<void> {
+  removeWidget(widgetId: string): void {
     const current = this.dashboardService.currentDashboard();
     if (!current) return;
 
-    if (confirm('Remove this widget?')) {
-      await this.dashboardService.removeWidget(current.id, widgetId);
-    }
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Remove Widget',
+        message: 'Are you sure you want to remove this widget?',
+        confirmText: 'Remove',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed: boolean) => {
+      if (confirmed) {
+        await this.dashboardService.removeWidget(current.id, widgetId);
+      }
+    });
   }
 
   async refreshWidget(widget: DashboardWidget): Promise<void> {
@@ -476,27 +545,18 @@ export class DashboardComponent {
     }
   }
 
-  toGridsterItem(widget: DashboardWidget): GridsterItemConfig {
-    return {
-      x: widget.x,
-      y: widget.y,
-      cols: widget.cols,
-      rows: widget.rows,
-    };
+  getWidgetData(widgetId: string): any {
+    return this.widgetData()[widgetId];
   }
 
-  async onItemChange(item: GridsterItemConfig): Promise<void> {
-    const current = this.dashboardService.currentDashboard();
-    if (!current) return;
-
-    // Find the widget by position
-    const widget = current.widgets.find((w) =>
-      w.x === item.x && w.y === item.y
-    );
-    if (widget) {
-      widget.cols = item.cols ?? widget.cols;
-      widget.rows = item.rows ?? widget.rows;
-      await this.dashboardService.updateWidget(current.id, widget);
+  formatCell(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'NULL';
     }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
   }
+
 }

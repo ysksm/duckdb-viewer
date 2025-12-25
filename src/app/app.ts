@@ -147,6 +147,12 @@ import { TableInfo } from './models/database.model';
       height: 100%;
       overflow: auto;
     }
+
+    app-dashboard {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
   `],
 })
 export class App {

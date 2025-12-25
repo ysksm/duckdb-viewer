@@ -65,3 +65,19 @@ body {
   --mdc-filled-text-field-container-color: #333;
   --mdc-outlined-text-field-outline-color: #424242;
 }
+
+// Angular Gridster2 styles
+gridster {
+  background: #1e1e1e !important;
+}
+
+gridster-item {
+  background: #252526;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gridster-item-content {
+  height: 100%;
+  width: 100%;
+}
