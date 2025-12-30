@@ -36,6 +36,12 @@ pub struct QueryResult {
     pub execution_time_ms: u128,
 }
 
+/// Export options for batch export operations.
+/// Future use: Unified export API that accepts options as a single struct
+/// instead of individual parameters, enabling features like:
+/// - Export presets/templates
+/// - Bulk export with multiple queries
+/// - Export job queuing
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportOptions {
@@ -54,6 +60,12 @@ pub enum ExportFormat {
     Json,
 }
 
+/// Import options for batch import operations.
+/// Future use: Unified import API that accepts options as a single struct
+/// instead of separate commands per format, enabling features like:
+/// - Auto-detect file format from extension
+/// - Import with column mapping/transformation
+/// - Batch import from multiple files
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportOptions {
@@ -62,6 +74,8 @@ pub struct ImportOptions {
     pub format: ImportFormat,
 }
 
+/// Supported import file formats.
+/// Future use: Used with ImportOptions for unified import API
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
